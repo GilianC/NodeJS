@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Chat en temps réel</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        h2 {
+            margin-top: 40px;
+            color: #405de6;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+        #chat {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(64,93,230,0.08);
+            border: none;
+            padding: 16px;
+            width: 350px;
+            height: 400px;
+            overflow-y: auto;
+            margin-bottom: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .bubble {
+            max-width: 70%;
+            padding: 10px 16px;
+            border-radius: 18px;
+            margin-bottom: 2px;
+            font-size: 15px;
+            position: relative;
+            word-break: break-word;
+            box-shadow: 0 1px 3px rgba(64,93,230,0.07);
+        }
+        .me {
+            background: linear-gradient(135deg, #405de6 0%, #5851db 100%);
+            color: #fff;
+            align-self: flex-end;
+        }
+        .other {
+            background: #f1f1f1;
+            color: #333;
+            align-self: flex-start;
+        }
+        .pseudo {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 2px;
+            color: #405de6;
+        }
+        #form {
+            display: flex;
+            width: 350px;
+            gap: 8px;
+        }
+        #input {
+            flex: 1;
+            padding: 10px;
+            border-radius: 16px;
+            border: 1px solid #e0e7ff;
+            font-size: 15px;
+            outline: none;
+            background: #f8fafc;
+        }
+        button {
+            background: linear-gradient(135deg, #405de6 0%, #5851db 100%);
+            color: #fff;
+            border: none;
+            border-radius: 16px;
+            padding: 0 20px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: linear-gradient(135deg, #5851db 0%, #405de6 100%);
+        }
+    </style>
+</head>
+<body>
+    <h2>Chat en temps réel</h2>
+    <div id="chat"></div>
+    <form id="form" style="display:none;">
+        <input id="input" autocomplete="off" /><button>Envoyer</button>
+    </form>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let pseudo = '';
+        window.addEventListener('DOMContentLoaded', () => {
+            while (!pseudo) {
+                pseudo = window.prompt('Entrez votre pseudo :');
+                if (pseudo) {
+                    pseudo = pseudo.trim();
+                }
+            }
+            document.getElementById('form').style.display = '';
+        });
+        const form = document.getElementById('form');
+        const input = document.getElementById('input');
+        const chat = document.getElementById('chat');
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (input.value && pseudo) {
+                socket.emit('chat message', { pseudo, message: input.value });
+                input.value = '';
+            }
+        });
+        socket.on('chat message', function(data) {
+            const wrapper = document.createElement('div');
+            wrapper.style.display = 'flex';
+            wrapper.style.flexDirection = 'column';
+            wrapper.style.alignItems = (data.pseudo === pseudo) ? 'flex-end' : 'flex-start';
+
+            const pseudoDiv = document.createElement('div');
+            pseudoDiv.classList.add('pseudo');
+            pseudoDiv.textContent = data.pseudo;
+            pseudoDiv.style.marginBottom = '2px';
+            wrapper.appendChild(pseudoDiv);
+
+            const item = document.createElement('div');
+            item.classList.add('bubble');
+            if (data.pseudo === pseudo) {
+                item.classList.add('me');
+            } else {
+                item.classList.add('other');
+            }
+            const msgDiv = document.createElement('div');
+            msgDiv.textContent = data.message;
+            item.appendChild(msgDiv);
+            wrapper.appendChild(item);
+
+            chat.appendChild(wrapper);
+            chat.scrollTop = chat.scrollHeight;
+        });
+    </script>
+</body>
+</html>
