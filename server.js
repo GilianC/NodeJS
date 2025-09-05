@@ -21,9 +21,18 @@ app.get('/', (req, res) => {
 });
 
 // Socket.IO
+let users = {};
 io.on('connection', (socket) => {
+  socket.on('new user', (pseudo) => {
+    users[socket.id] = pseudo;
+    io.emit('user list', Object.values(users));
+  });
   socket.on('chat message', (data) => {
     io.emit('chat message', data);
+  });
+  socket.on('disconnect', () => {
+    delete users[socket.id];
+    io.emit('user list', Object.values(users));
   });
 });
 

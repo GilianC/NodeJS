@@ -9,16 +9,74 @@
             background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
             margin: 0;
             padding: 0;
+            min-height: 100vh;
+        }
+        .container {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: flex-start;
+            margin-top: 40px;
+            gap: 32px;
+        }
+        .sidebar {
+            width: 180px;
+            min-width: 120px;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(64,93,230,0.08);
+            padding: 18px 12px;
+            height: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .ad {
+            font-size: 16px;
+            color: #405de6;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        .ad-img {
+            width: 100%;
+            border-radius: 12px;
+            margin-bottom: 8px;
+        }
+        .users-title {
+            font-size: 15px;
+            color: #5851db;
+            font-weight: 600;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        .user-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+            margin: 0;
+            list-style: none;
+        }
+        .user-list li {
+            padding: 6px 0;
+            font-size: 14px;
+            color: #333;
+            border-bottom: 1px solid #e0e7ff;
+        }
+        .user-list li.me {
+            color: #e1306c;
+            font-weight: 700;
+        }
+        .chat-main {
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-height: 100vh;
         }
         h2 {
-            margin-top: 40px;
             color: #405de6;
             font-weight: 700;
             letter-spacing: 1px;
+            margin-bottom: 16px;
         }
         #chat {
             background: #fff;
@@ -91,15 +149,29 @@
     </style>
 </head>
 <body>
-    <h2>Chat en temps réel</h2>
-    <div id="chat"></div>
-    <form id="form" style="display:none;">
-        <input id="input" autocomplete="off" /><button>Envoyer</button>
-    </form>
+    <div class="container">
+        <div class="sidebar">
+            <div class="ad">Publicité</div>
+            <img src="/image/logo.png" alt="Pub" class="ad-img" />
+            <div style="font-size:13px; color:#333; text-align:center;">Découvrez le meilleur chat du web !<br>Essayez-le maintenant.</div>
+        </div>
+        <div class="chat-main">
+            <h2>Chat en temps réel</h2>
+            <div id="chat"></div>
+            <form id="form" style="display:none;">
+                <input id="input" autocomplete="off" /><button>Envoyer</button>
+            </form>
+        </div>
+        <div class="sidebar">
+            <div class="users-title">Utilisateurs connectés</div>
+            <ul id="user-list" class="user-list"></ul>
+        </div>
+    </div>
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
         let pseudo = '';
+        let users = [];
         window.addEventListener('DOMContentLoaded', () => {
             while (!pseudo) {
                 pseudo = window.prompt('Entrez votre pseudo :');
@@ -108,10 +180,13 @@
                 }
             }
             document.getElementById('form').style.display = '';
+            socket.emit('new user', pseudo);
         });
         const form = document.getElementById('form');
         const input = document.getElementById('input');
         const chat = document.getElementById('chat');
+        const userList = document.getElementById('user-list');
+
         form.addEventListener('submit', function(e) {
             e.preventDefault();
             if (input.value && pseudo) {
@@ -119,6 +194,7 @@
                 input.value = '';
             }
         });
+
         socket.on('chat message', function(data) {
             const wrapper = document.createElement('div');
             wrapper.style.display = 'flex';
@@ -145,6 +221,17 @@
 
             chat.appendChild(wrapper);
             chat.scrollTop = chat.scrollHeight;
+        });
+
+        socket.on('user list', function(list) {
+            users = list;
+            userList.innerHTML = '';
+            users.forEach(function(u) {
+                const li = document.createElement('li');
+                li.textContent = u;
+                if (u === pseudo) li.classList.add('me');
+                userList.appendChild(li);
+            });
         });
     </script>
 </body>
