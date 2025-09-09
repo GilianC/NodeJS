@@ -16,8 +16,18 @@ app.set('view engine', 'twig');
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Page principale du chat
+// Page de connexion pseudo
 app.get('/', (req, res) => {
-  res.render('chat.twig');
+  res.render('login.twig');
+});
+
+// Page du chat, pseudo transmis en paramètre
+app.get('/chat', (req, res) => {
+  const pseudo = req.query.pseudo;
+  if (!pseudo) {
+    return res.redirect('/');
+  }
+  res.render('chat.twig', { pseudo });
 });
 
 // Socket.IO

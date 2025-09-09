@@ -176,15 +176,9 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
-        let pseudo = '';
+        let pseudo = '{{ pseudo|e }}';
         let users = [];
         window.addEventListener('DOMContentLoaded', () => {
-            while (!pseudo) {
-                pseudo = window.prompt('Entrez votre pseudo :');
-                if (pseudo) {
-                    pseudo = pseudo.trim();
-                }
-            }
             document.getElementById('form').style.display = '';
             socket.emit('new user', pseudo);
         });
