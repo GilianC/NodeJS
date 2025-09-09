@@ -82,4 +82,3 @@ server.listen(PORT, () => {
 });
 
 dotenv.config();
-console.log(DATABASE_URL);
