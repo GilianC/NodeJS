@@ -1,18 +1,31 @@
-const express = require('express');
-const http = require('http');
-const path = require('path');
-const { Server } = require('socket.io');
-const twig = require('twig');
 
+
+import express from 'express';
+import http from 'http';
+import path from 'path';
+import { Server } from 'socket.io';
+import twig from 'twig';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import { PrismaClient } from '@prisma/client';
+
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+
+const prisma = new PrismaClient();
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
 // Configuration Twig
+
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'twig');
 
 // Fichiers statiques
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Page principale du chat
@@ -22,22 +35,37 @@ app.get('/', (req, res) => {
 });
 
 // Page du chat, pseudo transmis en paramètre
-app.get('/chat', (req, res) => {
+
+app.get('/chat', async (req, res) => {
   const pseudo = req.query.pseudo;
   if (!pseudo) {
     return res.redirect('/');
   }
-  res.render('chat.twig', { pseudo });
+  // Récupérer les derniers messages
+  const messages = await prisma.message.findMany({
+    orderBy: { date: 'asc' },
+    take: 50
+  });
+  res.render('chat.twig', { pseudo, messages });
 });
 
 // Socket.IO
+
 let users = {};
+
 io.on('connection', (socket) => {
   socket.on('new user', (pseudo) => {
     users[socket.id] = pseudo;
     io.emit('user list', Object.values(users));
   });
-  socket.on('chat message', (data) => {
+  socket.on('chat message', async (data) => {
+    // Enregistrer le message dans la base
+    await prisma.message.create({
+      data: {
+        contenu: data.message,
+        pseudo: data.pseudo
+      }
+    });
     io.emit('chat message', data);
   });
   socket.on('disconnect', () => {
@@ -46,7 +74,10 @@ io.on('connection', (socket) => {
   });
 });
 
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Serveur démarré sur http://localhost:${PORT}`);
 });
+import dotenv from 'dotenv';
+dotenv.config();

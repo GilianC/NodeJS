@@ -157,7 +157,14 @@
         </div>
         <div class="chat-main">
             <h2>Chat en temps réel</h2>
-            <div id="chat"></div>
+                        <div id="chat">
+                        {% for msg in messages %}
+                            <div style="display:flex; flex-direction:column; align-items:{% if msg.pseudo == pseudo %}flex-end{% else %}flex-start{% endif %};">
+                                <div class="pseudo">{{ msg.pseudo|e }}</div>
+                                <div class="bubble {% if msg.pseudo == pseudo %}me{% else %}other{% endif %}"><div>{{ msg.contenu|e }}</div></div>
+                            </div>
+                        {% endfor %}
+                        </div>
             <form id="form" style="display:none;">
                 <input id="input" autocomplete="off" /><button>Envoyer</button>
             </form>
