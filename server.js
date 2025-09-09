@@ -41,12 +41,17 @@ app.get('/chat', async (req, res) => {
   if (!pseudo) {
     return res.redirect('/');
   }
-  // Récupérer les derniers messages
-  const messages = await prisma.message.findMany({
-    orderBy: { date: 'asc' },
-    take: 50
-  });
-  res.render('chat.twig', { pseudo, messages });
+  try {
+    // Récupérer les derniers messages
+    const messages = await prisma.message.findMany({
+      orderBy: { date: 'asc' },
+      take: 50
+    });
+    res.render('chat.twig', { pseudo, messages });
+  } catch (err) {
+    console.error('Erreur Prisma:', err);
+    res.status(500).send(`<pre>Erreur serveur: ${err.message || err}</pre>`);
+  }
 });
 
 // Socket.IO
