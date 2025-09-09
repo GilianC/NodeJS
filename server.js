@@ -37,9 +37,6 @@ app.get('/', (req, res) => {
 
 app.get('/chat', async (req, res) => {
   const pseudo = req.query.pseudo;
-  if (!pseudo) {
-    return res.redirect('/');
-  }
   try {
     // Récupérer les derniers messages
     const messages = await prisma.message.findMany({
@@ -85,4 +82,4 @@ server.listen(PORT, () => {
 });
 
 dotenv.config();
-console.log('DATABASE_URL:', process.env.DATABASE_URL);
+console.log(DATABASE_URL);
