@@ -1,5 +1,3 @@
-
-
 import express from 'express';
 import http from 'http';
 import path from 'path';
@@ -8,6 +6,7 @@ import twig from 'twig';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { PrismaClient } from '@prisma/client';
+import dotenv from 'dotenv';
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -84,5 +83,6 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Serveur démarré sur http://localhost:${PORT}`);
 });
-import dotenv from 'dotenv';
+
 dotenv.config();
+console.log('DATABASE_URL:', process.env.DATABASE_URL);
