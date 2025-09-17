@@ -1,164 +1,89 @@
-
-import cors from 'cors';
-
-import express from 'express';
-import http from 'http';
-import path from 'path';
-import { Server } from 'socket.io';
-import twig from 'twig';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import { PrismaClient } from '@prisma/client';
-import dotenv from 'dotenv';
 import session from 'express-session';
+import { Server } from 'socket.io';
+import { createServer } from 'http';
+import { app, prisma, sessionMiddleware } from './app.js';
+import dotenv from 'dotenv';
+dotenv.config();
 
-// Définir __filename et __dirname pour ES module
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-
-const prisma = new PrismaClient();
-const app = express();
-app.set('trust proxy', 1); // Trust proxy pour Render
-const server = http.createServer(app);
-const io = new Server(server);
-
+const httpServer = createServer(app);
 const FRONT_URL = process.env.FRONT_URL || 'http://localhost:3000';
-app.use(cors({
-  origin: FRONT_URL,
-  credentials: true
-}));
-// Middlewares pour parser les données du formulaire
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Servir les fichiers statiques (JS, CSS, images)
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Configuration express-session sécurisée
-app.use(session({
-  secret: 'supersecret',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    httpOnly: true
-  }
-}));
-
-// Route POST /login pour authentification utilisateur
-app.post('/login', async (req, res) => {
-  const { pseudo, password } = req.body;
-  if (!pseudo || !password) {
-    return res.status(400).json({ success: false, message: 'Pseudo et mot de passe requis.' });
-  }
-  try {
-    const user = await prisma.user.findUnique({ where: { pseudo } });
-    if (!user) {
-      return res.status(401).json({ success: false, message: 'Utilisateur inconnu.' });
-    }
-    if (typeof user.password !== 'string' || user.password !== password) {
-      return res.status(401).json({ success: false, message: 'Mot de passe incorrect.' });
-    }
-    req.session.user = { pseudo: user.pseudo, id: user.id };
-    return res.status(200).json({ success: true, message: 'Connexion réussie.' });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Erreur serveur.' });
+const io = new Server(httpServer, {
+  cors: {
+    origin: FRONT_URL,
+    credentials: true
   }
 });
+app.set('io', io);
 
-
-// ...existing code...
-
-
-// Page principale : affiche le chat si connecté, sinon le formulaire
-app.get('/', async (req, res) => {
-  if (req.session && req.session.user) {
-    const pseudo = req.session.user.pseudo;
-    const messages = await prisma.message.findMany({
-      orderBy: { date: 'asc' },
-      take: 50
-    });
-    res.render('chat.twig', { pseudo, messages });
-  } else {
-    res.render('login.twig');
-  }
-});
-// Route POST /login pour authentification utilisateur
-app.post('/login', async (req, res) => {
-  const { pseudo, password } = req.body;
-  if (!pseudo || !password) {
-    return res.status(400).json({ success: false, message: 'Pseudo et mot de passe requis.' });
-  }
-  try {
-    const user = await prisma.user.findUnique({ where: { pseudo } });
-    if (!user) {
-      return res.status(401).json({ success: false, message: 'Utilisateur inconnu.' });
+// Pour que les sockets aient accès à req.session
+io.use((socket, next) => {
+  sessionMiddleware(socket.request, {}, () => {
+    if (!socket.request.session || !socket.request.session.userId) {
+      console.log('Session non trouvée ou utilisateur non connecté');
+    } else {
+      console.log('Session récupérée:', socket.request.session);
     }
-    if (typeof user.password !== 'string' || user.password !== password) {
-      return res.status(401).json({ success: false, message: 'Mot de passe incorrect.' });
-    }
-    req.session.user = { pseudo: user.pseudo, id: user.id };
-    return res.status(200).json({ success: true, message: 'Connexion réussie.' });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Erreur serveur.' });
-  }
-});
-
-// Route GET /logout pour déconnexion
-app.get('/logout', (req, res) => {
-  req.session.destroy(() => {
-    res.redirect('/');
+    next();
   });
 });
 
-// Page du chat, pseudo transmis en paramètre
-
-app.get('/chat', async (req, res) => {
-  const pseudo = req.query.pseudo;
-  try {
-    // Récupérer les derniers messages
-    const messages = await prisma.message.findMany({
-      orderBy: { date: 'asc' },
-      take: 50
-    });
-    res.render('chat.twig', { pseudo, messages });
-  } catch (err) {
-    console.error('Erreur Prisma:', err);
-    res.status(500).send(`<pre>Erreur serveur: ${err.message || err}</pre>`);
-  }
+// Pour les tests, on peut utiliser un écho simple
+io.on('connection', (socket) => {
+  socket.on('message', (msg) => {
+    socket.emit('message', msg); // réponse écho
+  });
 });
 
 // Socket.IO
+io.on('connection', async (socket) => {
+  console.log('Un utilisateur connecté');
 
-let users = {};
-
-io.on('connection', (socket) => {
-  socket.on('new user', (pseudo) => {
-    users[socket.id] = pseudo;
-    io.emit('user list', Object.values(users));
-  });
-  socket.on('chat message', async (data) => {
-    // Enregistrer le message dans la base
-    await prisma.message.create({
-      data: {
-        contenu: data.message,
-        pseudo: data.pseudo
-      }
+  // Récupérer les derniers messages (par exemple, les 50 plus récents)
+  try {
+    const lastMessages = await prisma.message.findMany({
+      orderBy: { createdAt: 'asc' },  // ou 'desc' puis inverser côté client
+      take: 50,
     });
-    io.emit('chat message', data);
+    // Envoyer l’historique au client connecté
+    socket.emit('chat history', lastMessages);
+  } catch (err) {
+    console.error('Erreur récupération historique:', err);
+  }
+
+  socket.on('chat message', async (data) => {
+    console.log('Message reçu:', data);
+    try {
+      const session = socket.request.session;
+      console.log('Session:', session);
+      if (!session.userId) {
+        console.error('Utilisateur non connecté');
+        return;
+      }
+      const pseudo = session.pseudo;
+      const message = data.message;
+      await prisma.message.create({
+        data: {
+          pseudo: pseudo,
+          content: message,
+        },
+      });
+      io.emit('chat message', {pseudo, message});
+    } catch (err) {
+      console.error('Erreur sauvegarde message:', err);
+    }
   });
+
   socket.on('disconnect', () => {
-    delete users[socket.id];
-    io.emit('user list', Object.values(users));
+    console.log('Un utilisateur déconnecté');
   });
 });
 
 
+
+// Démarrage
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Serveur démarré sur http://localhost:${PORT}`);
+httpServer.listen(PORT, () => {
+  console.log(`Serveur lancé sur ${FRONT_URL}`);
 });
 
-dotenv.config();
+export { httpServer, io };

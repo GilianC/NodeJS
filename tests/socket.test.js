@@ -1,32 +1,29 @@
-// Test d'intégration Socket.IO
-import { createServer } from 'http';
-import { Server } from 'socket.io';
-import Client from 'socket.io-client';
+// __tests__/socket.test.js
+import { io as Client } from 'socket.io-client';
+import { httpServer } from '../server.js'; // adapte le chemin si nécessaire
 
-let io, serverSocket, clientSocket;
+let clientSocket;
 
-beforeAll((done) => {
-  const httpServer = createServer();
-  io = new Server(httpServer);
-  httpServer.listen(() => {
-    const port = httpServer.address().port;
-    clientSocket = Client(`http://localhost:${port}`);
-    io.on('connection', (socket) => {
-      serverSocket = socket;
-      done();
+// beforeAll((done) => {
+//     httpServer.listen(3000, () => done());
+// });
+
+afterAll((done) => {
+    if (clientSocket?.connected) clientSocket.disconnect();
+    httpServer.close(() => done());
+});
+
+describe('Test des sockets', () => {
+    test('Le serveur renvoie le message envoyé', (done) => {
+        clientSocket = new Client('http://localhost:3000');
+
+        clientSocket.on('connect', () => {
+            clientSocket.emit('message', 'Bonjour serveur');
+
+            clientSocket.on('message', (data) => {
+                expect(data).toBe('Bonjour serveur');
+                done();
+            });
+        });
     });
-  });
-});
-
-afterAll(() => {
-  io.close();
-  clientSocket.close();
-});
-
-test('communication Socket.IO', (done) => {
-  clientSocket.on('chat message', (msg) => {
-    expect(msg).toBe('Hello');
-    done();
-  });
-  serverSocket.emit('chat message', 'Hello');
 });
