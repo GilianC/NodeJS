@@ -3,31 +3,25 @@ import http from 'http';
 import path from 'path';
 import { Server } from 'socket.io';
 import twig from 'twig';
+
+import express from 'express';
+import http from 'http';
+import path from 'path';
+import { Server } from 'socket.io';
+import twig from 'twig';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { PrismaClient } from '@prisma/client';
 import dotenv from 'dotenv';
-// import app from 'index.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
+import session from 'express-session';
 
 const prisma = new PrismaClient();
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
-
-// Configuration Twig
-
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'twig');
-
-// Fichiers statiques
-
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Page principale du chat
+
 // Page de connexion pseudo
 app.get('/', (req, res) => {
   res.render('login.twig');
