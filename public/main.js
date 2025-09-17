@@ -1,3 +1,15 @@
+// Gestion du bouton de déconnexion
+document.addEventListener('DOMContentLoaded', () => {
+  const logoutForm = document.querySelector('form[action="/logout"]');
+  if (logoutForm) {
+    logoutForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      fetch('/logout', { method: 'GET', credentials: 'include' })
+        .then(() => window.location.href = '/')
+        .catch(() => window.location.href = '/');
+    });
+  }
+});
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('loginForm');
   if (form) {

@@ -1,3 +1,28 @@
+import cors from 'cors';
+// Trust proxy pour Render
+app.set('trust proxy', 1);
+
+// Configuration CORS
+const FRONT_URL = process.env.FRONT_URL || 'http://localhost:3000';
+app.use(cors({
+  origin: FRONT_URL,
+  credentials: true
+}));
+// Middlewares pour parser les données du formulaire
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Configuration express-session sécurisée
+app.use(session({
+  secret: 'supersecret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    httpOnly: true
+  }
+}));
 // Route POST /login pour authentification utilisateur
 app.post('/login', async (req, res) => {
   const { pseudo, password } = req.body;
@@ -40,9 +65,45 @@ const io = new Server(server);
 app.use(express.static(path.join(__dirname, 'public')));
 
 
-// Page de connexion pseudo
-app.get('/', (req, res) => {
-  res.render('login.twig');
+// Page principale : affiche le chat si connecté, sinon le formulaire
+app.get('/', async (req, res) => {
+  if (req.session && req.session.user) {
+    const pseudo = req.session.user.pseudo;
+    const messages = await prisma.message.findMany({
+      orderBy: { date: 'asc' },
+      take: 50
+    });
+    res.render('chat.twig', { pseudo, messages });
+  } else {
+    res.render('login.twig');
+  }
+});
+// Route POST /login pour authentification utilisateur
+app.post('/login', async (req, res) => {
+  const { pseudo, password } = req.body;
+  if (!pseudo || !password) {
+    return res.status(400).json({ success: false, message: 'Pseudo et mot de passe requis.' });
+  }
+  try {
+    const user = await prisma.user.findUnique({ where: { pseudo } });
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Utilisateur inconnu.' });
+    }
+    if (typeof user.password !== 'string' || user.password !== password) {
+      return res.status(401).json({ success: false, message: 'Mot de passe incorrect.' });
+    }
+    req.session.user = { pseudo: user.pseudo, id: user.id };
+    return res.status(200).json({ success: true, message: 'Connexion réussie.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+});
+
+// Route GET /logout pour déconnexion
+app.get('/logout', (req, res) => {
+  req.session.destroy(() => {
+    res.redirect('/');
+  });
 });
 
 // Page du chat, pseudo transmis en paramètre
