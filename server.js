@@ -1,6 +1,27 @@
+
 import cors from 'cors';
-// Trust proxy pour Render
-app.set('trust proxy', 1);
+
+import express from 'express';
+import http from 'http';
+import path from 'path';
+import { Server } from 'socket.io';
+import twig from 'twig';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import { PrismaClient } from '@prisma/client';
+import dotenv from 'dotenv';
+import session from 'express-session';
+
+// Définir __filename et __dirname pour ES module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+
+const prisma = new PrismaClient();
+const app = express();
+app.set('trust proxy', 1); // Trust proxy pour Render
+const server = http.createServer(app);
+const io = new Server(server);
 
 // Configuration CORS
 const FRONT_URL = process.env.FRONT_URL || 'http://localhost:3000';
@@ -23,6 +44,7 @@ app.use(session({
     httpOnly: true
   }
 }));
+
 // Route POST /login pour authentification utilisateur
 app.post('/login', async (req, res) => {
   const { pseudo, password } = req.body;
@@ -43,26 +65,9 @@ app.post('/login', async (req, res) => {
     res.status(500).json({ success: false, message: 'Erreur serveur.' });
   }
 });
-// Définir __filename et __dirname pour ES module
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
-import express from 'express';
-import http from 'http';
-import path from 'path';
-import { Server } from 'socket.io';
-import twig from 'twig';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import { PrismaClient } from '@prisma/client';
-import dotenv from 'dotenv';
-import session from 'express-session';
 
-const prisma = new PrismaClient();
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
-app.use(express.static(path.join(__dirname, 'public')));
+// ...existing code...
 
 
 // Page principale : affiche le chat si connecté, sinon le formulaire
