@@ -1,17 +1,3 @@
-// Route POST /login pour authentification utilisateur
-app.post('/login', async (req, res) => {
-  const { pseudo, password } = req.body;
-  try {
-    const user = await prisma.user.findUnique({ where: { pseudo } });
-    if (user && user.password === password) {
-      req.session.user = { pseudo: user.pseudo, id: user.id };
-      return res.status(200).json({ success: true });
-    }
-    res.status(401).json({ success: false, message: 'Identifiants invalides' });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
-  }
-});
 // Définir __filename et __dirname pour ES module
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
