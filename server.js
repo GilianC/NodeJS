@@ -1,3 +1,6 @@
+// Définir __filename et __dirname pour ES module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 import express from 'express';
 import http from 'http';
