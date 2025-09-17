@@ -7,7 +7,10 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "prisma": "prisma"
   },
   "dependencies": {
     "@prisma/client": "^6.15.0",
@@ -17,6 +20,13 @@
     "prisma": "^6.15.0",
     "save": "^2.9.0",
     "socket.io": "^4.8.1",
+    "test": "^3.3.0",
     "twig": "^1.17.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "jest": "^30.1.3",
+    "socket.io-client": "^4.8.1",
+    "supertest": "^7.1.4"
   }
 }
