@@ -23,7 +23,6 @@ app.set('trust proxy', 1); // Trust proxy pour Render
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Configuration CORS
 const FRONT_URL = process.env.FRONT_URL || 'http://localhost:3000';
 app.use(cors({
   origin: FRONT_URL,
@@ -32,6 +31,9 @@ app.use(cors({
 // Middlewares pour parser les données du formulaire
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Servir les fichiers statiques (JS, CSS, images)
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Configuration express-session sécurisée
 app.use(session({
